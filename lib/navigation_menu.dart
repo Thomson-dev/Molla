@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:get/get.dart';
+import 'package:molla/features/authentication/screens/settings/settingScreen.dart';
 import 'package:molla/features/shop/screens/home/home.dart';
 import 'package:molla/features/shop/screens/store/store.dart';
 
@@ -14,7 +15,7 @@ class NavigationController extends GetxController {
     HomeScreen(),
     StoreScreen(),
     Container(color: Colors.orange),
-    Container(color: Colors.blue),
+    SettingsScreen(),
   ];
 }
 

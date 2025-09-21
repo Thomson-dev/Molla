@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:molla/common/widgets/shimmer/shimmer_effect.dart';
+import 'package:molla/features/authentication/controllers/user/user_controller.dart'
+    show UserController;
+
 import 'package:molla/features/shop/screens/home/widgets/popular_categories.dart';
 import 'package:molla/features/shop/screens/home/widgets/product_card_vertical.dart';
 import 'package:molla/utils/constants/image_strings.dart';
@@ -15,24 +21,35 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Get device metrics for responsive sizing
+    final size = MediaQuery.of(context).size;
+    final isSmallScreen = size.width < 380;
+
     return Scaffold(
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // Header section with curved edges
             ClipPath(
               clipper: TCustomCurvedEdges(),
               child: Container(
                 color: TColors.primary,
-                height: 400,
-                child: const Stack(
+                // Responsive height based on screen size
+                height: size.height * 0.45, // 45% of screen height
+                child: Stack(
                   children: [
-                    // Decorative Circles
-                    _BackgroundCircles(),
+                    // Decorative Circles - responsive
+                    _BackgroundCircles(screenWidth: size.width),
                     // Custom AppBar
-                    Positioned(top: 10, left: 0, right: 0, child: HomeAppBar()),
+                    const Positioned(
+                      top: 10,
+                      left: 0,
+                      right: 0,
+                      child: HomeAppBar(),
+                    ),
                     // SearchBar
                     Positioned(
-                      top: 100,
+                      top: size.height * 0.15, // Responsive positioning
                       left: 0,
                       right: 0,
                       child: HomeSearchBar(
@@ -42,45 +59,67 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                     // Popular Categories
-                    PopularCategories(),
+                    const PopularCategories(),
                   ],
                 ),
               ),
             ),
+
+            // Carousel with responsive height
             CarouselSlider(
-              options: CarouselOptions(viewportFraction: 1),
+              options: CarouselOptions(
+                viewportFraction: 1,
+                height: size.height * 0.25, // Responsive height
+                autoPlay: true,
+                autoPlayInterval: const Duration(seconds: 5),
+              ),
               items: const [
                 TRoundedImage(imageUrl: TImages.productImage1),
                 TRoundedImage(imageUrl: TImages.productImage2),
                 TRoundedImage(imageUrl: TImages.productImage3),
               ],
             ),
+
             const SizedBox(height: TSizes.spaceBtwItems),
+
+            // Carousel indicators - responsive size
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 for (int i = 0; i < 3; i++)
                   Container(
-                    margin: const EdgeInsets.only(right: 8),
+                    margin: EdgeInsets.only(right: isSmallScreen ? 5 : 8),
                     child: Container(
-                      width: i == 0 ? 20 : 10, // Active indicator is wider
-                      height: 4, // Flat height for pill shape
-                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      // Responsive indicator size
+                      width:
+                          i == 0
+                              ? (isSmallScreen ? 15 : 20)
+                              : (isSmallScreen ? 8 : 10),
+                      height: isSmallScreen ? 3 : 4,
+                      margin: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 1 : 2,
+                      ),
                       decoration: BoxDecoration(
                         color:
                             i == 0
                                 ? TColors.primary
                                 : TColors.primary.withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(
-                          2,
-                        ), // Small radius for slightly rounded corners
+                        borderRadius: BorderRadius.circular(2),
                       ),
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: TSizes.spaceBtwSections),
-            // Heading
+
+            // Adaptive spacing
+            SizedBox(
+              height:
+                  isSmallScreen
+                      ? TSizes.spaceBtwItems
+                      : TSizes.spaceBtwSections,
+            ),
+
+            // Popular Products heading - responsive text
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: TSizes.defaultSpace,
@@ -88,47 +127,73 @@ class HomeScreen extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Popular Products',
-                    style: Theme.of(context).textTheme.headlineSmall,
+                  Expanded(
+                    child: Text(
+                      'Popular Products',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineSmall?.copyWith(
+                        // Responsive text size
+                        fontSize: isSmallScreen ? 18 : null,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                  TextButton(onPressed: () {}, child: const Text('View All')),
+                  TextButton(
+                    onPressed: () {},
+                    child: Text(
+                      'View All',
+                      style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
+                    ),
+                  ),
                 ],
               ),
             ),
+
             const SizedBox(height: TSizes.spaceBtwItems),
 
-            // Grid
+            // Products Grid - responsive layout
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: TSizes.defaultSpace,
               ),
-              child: GridView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
-                itemCount: 4,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  mainAxisSpacing: TSizes.spaceBtwItems,
-                  crossAxisSpacing: TSizes.spaceBtwItems,
-                  mainAxisExtent: 250,
-                ),
-                itemBuilder:
-                    (_, index) => TProductCardVertical(
-                      title: "Nike Air Zoom Pegasus",
-                      image: TImages.productImage4,
-                      price: 35.00,
-                      oldPrice: 45.00,
-                      discountTag: "25%",
-                      onTap: () {
-                        // Navigate to product details
-                      },
-                      onFavoriteTap: () {
-                        // Toggle favorite
-                      },
-                      isFavorite: true,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // Determine columns based on available width
+                  final double availableWidth = constraints.maxWidth;
+                  final int columnCount = availableWidth > 600 ? 3 : 2;
+
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: EdgeInsets.zero,
+                    itemCount: 4,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columnCount,
+                      mainAxisSpacing:
+                          isSmallScreen ? TSizes.sm : TSizes.spaceBtwItems,
+                      crossAxisSpacing:
+                          isSmallScreen ? TSizes.sm : TSizes.spaceBtwItems,
+                      // Responsive card height
+                      mainAxisExtent: isSmallScreen ? 250 : 270,
                     ),
+                    itemBuilder:
+                        (_, index) => TProductCardVertical(
+                          title: "Nike Air Zoom Pegasus",
+                          image: TImages.productImage4,
+                          price: 35.00,
+                          oldPrice: 45.00,
+                          discountTag: "25%",
+                          onTap: () {
+                            // Navigate to product details
+                          },
+                          onFavoriteTap: () {
+                            // Toggle favorite
+                          },
+                          isFavorite: true,
+                        ),
+                  );
+                },
               ),
             ),
             const SizedBox(height: TSizes.spaceBtwSections),
@@ -169,10 +234,13 @@ class TRoundedImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Use screen width for responsive sizing if not provided
+    final size = MediaQuery.of(context).size;
+
     return GestureDetector(
       onTap: onPressed,
       child: Container(
-        width: width,
+        width: width ?? size.width,
         height: height,
         padding: padding,
         decoration: BoxDecoration(
@@ -184,7 +252,16 @@ class TRoundedImage extends StatelessWidget {
           borderRadius: borderRadius ?? BorderRadius.circular(TSizes.md),
           child:
               isNetworkImage
-                  ? Image.network(imageUrl, fit: fit)
+                  ? Image.network(
+                    imageUrl,
+                    fit: fit,
+                    errorBuilder:
+                        (context, error, stackTrace) => Icon(
+                          Icons.error_outline,
+                          size: 50,
+                          color: TColors.primary,
+                        ),
+                  )
                   : Image.asset(imageUrl, fit: fit),
         ),
       ),
@@ -192,12 +269,17 @@ class TRoundedImage extends StatelessWidget {
   }
 }
 
-/// Extracted background circles for clarity
+/// Responsive background circles
 class _BackgroundCircles extends StatelessWidget {
-  const _BackgroundCircles();
+  final double screenWidth;
+
+  const _BackgroundCircles({this.screenWidth = 400});
 
   @override
   Widget build(BuildContext context) {
+    final largeCircleSize = screenWidth * 0.8;
+    final smallCircleSize = screenWidth * 0.6;
+
     return Stack(
       children: [
         Positioned(
@@ -205,6 +287,8 @@ class _BackgroundCircles extends StatelessWidget {
           right: -250,
           child: TCircularContainer(
             backgroundColor: TColors.textWhite.withOpacity(0.3),
+            width: largeCircleSize,
+            height: largeCircleSize,
           ),
         ),
         Positioned(
@@ -212,6 +296,8 @@ class _BackgroundCircles extends StatelessWidget {
           right: -100,
           child: TCircularContainer(
             backgroundColor: TColors.textWhite.withOpacity(0.3),
+            width: smallCircleSize,
+            height: smallCircleSize,
           ),
         ),
       ],
@@ -221,10 +307,13 @@ class _BackgroundCircles extends StatelessWidget {
 
 /// Extracted AppBar for clarity and reusability
 class HomeAppBar extends StatelessWidget {
-  const HomeAppBar();
+  const HomeAppBar({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 380;
+    final controller = Get.put(UserController());
+
     return TAppBar(
       showBackArrow: false,
       title: Column(
@@ -232,16 +321,30 @@ class HomeAppBar extends StatelessWidget {
         children: [
           Text(
             TTexts.homeAppbarTitle,
-            style: Theme.of(
-              context,
-            ).textTheme.labelMedium!.apply(color: TColors.light),
+            style: Theme.of(context).textTheme.labelMedium!.apply(
+              color: TColors.light,
+              // Adaptive text size
+              fontSizeFactor: isSmallScreen ? 0.9 : 1.0,
+            ),
           ),
-          Text(
-            TTexts.homeAppbarSubTitle,
-            style: Theme.of(
-              context,
-            ).textTheme.headlineSmall!.apply(color: TColors.light),
-          ),
+          Obx(() {
+            // Show shimmer effect when profile is loading
+            if (controller.profileLoading.value) {
+              print("Profile loading: ${controller.profileLoading.value}");
+              // Display a shimmer loader while user profile is being loaded
+              return TShimmerEffect(width: 80, height: 15);
+            } else {
+              // Show the user's name when loaded
+              return Text(
+                'Hello ${controller.user.value.firstName}',
+                style: Theme.of(context).textTheme.headlineSmall!.apply(
+                  color: TColors.light,
+                  // Adaptive text size
+                  fontSizeFactor: isSmallScreen ? 0.9 : 1.0,
+                ),
+              );
+            }
+          }),
         ],
       ),
       actions: [
@@ -249,13 +352,19 @@ class HomeAppBar extends StatelessWidget {
           children: [
             IconButton(
               onPressed: () {},
-              icon: const Icon(Iconsax.shopping_bag, color: TColors.light),
+              icon: Icon(
+                Iconsax.shopping_bag,
+                color: TColors.light,
+                // Adaptive icon size
+                size: isSmallScreen ? 22 : 24,
+              ),
             ),
             Positioned(
               right: 0,
               child: Container(
-                width: 18,
-                height: 18,
+                // Adaptive badge size
+                width: isSmallScreen ? 16 : 18,
+                height: isSmallScreen ? 16 : 18,
                 decoration: BoxDecoration(
                   color: TColors.dark,
                   borderRadius: BorderRadius.circular(100),
@@ -265,7 +374,7 @@ class HomeAppBar extends StatelessWidget {
                     '2',
                     style: Theme.of(context).textTheme.labelLarge!.apply(
                       color: TColors.light,
-                      fontSizeFactor: 0.8,
+                      fontSizeFactor: isSmallScreen ? 0.7 : 0.8,
                     ),
                   ),
                 ),
@@ -278,7 +387,6 @@ class HomeAppBar extends StatelessWidget {
   }
 }
 
-/// Extracted SearchBar for clarity and reusability
 class HomeSearchBar extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
 
@@ -287,6 +395,7 @@ class HomeSearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final isSmallScreen = MediaQuery.of(context).size.width < 380;
 
     return Padding(
       padding: padding ?? const EdgeInsets.all(0),
@@ -296,7 +405,8 @@ class HomeSearchBar extends StatelessWidget {
         },
         child: Container(
           width: MediaQuery.of(context).size.width,
-          padding: const EdgeInsets.all(TSizes.md),
+          // Adaptive padding
+          padding: EdgeInsets.all(isSmallScreen ? TSizes.md : TSizes.md),
           decoration: BoxDecoration(
             color: dark ? TColors.dark : TColors.light,
             borderRadius: BorderRadius.circular(TSizes.cardRadiusLg),
@@ -304,11 +414,19 @@ class HomeSearchBar extends StatelessWidget {
           ),
           child: Row(
             children: [
-              Icon(Iconsax.search_normal, color: TColors.darkerGrey),
-              const SizedBox(width: TSizes.spaceBtwItems),
+              Icon(
+                Iconsax.search_normal,
+                color: TColors.darkerGrey,
+                // Adaptive icon size
+                size: isSmallScreen ? 20 : 24,
+              ),
+              SizedBox(width: isSmallScreen ? TSizes.xs : TSizes.spaceBtwItems),
               Text(
                 "Search in Store",
-                style: Theme.of(context).textTheme.bodySmall,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  // Adaptive text size
+                  fontSize: isSmallScreen ? 12 : 14,
+                ),
               ),
             ],
           ),
@@ -318,7 +436,6 @@ class HomeSearchBar extends StatelessWidget {
   }
 }
 
-// Dummy TCircularContainer for illustration. Replace with your actual widget.
 class TCircularContainer extends StatelessWidget {
   final Color backgroundColor;
   final double? width;
@@ -335,9 +452,12 @@ class TCircularContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Container(
-      width: width ?? 300,
-      height: height ?? 300,
+      // Use provided dimensions or calculate based on screen size
+      width: width ?? screenWidth * 0.7,
+      height: height ?? screenWidth * 0.7,
       margin: margin,
       decoration: BoxDecoration(color: backgroundColor, shape: BoxShape.circle),
     );

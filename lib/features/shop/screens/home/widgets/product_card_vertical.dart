@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:molla/utils/constants/image_strings.dart';
 import 'package:molla/utils/constants/sizes.dart';
 import 'package:molla/utils/theme/color.dart';
 
@@ -31,116 +30,193 @@ class TProductCardVertical extends StatefulWidget {
 
 class _TProductCardVerticalState extends State<TProductCardVertical>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _scaleAnimation;
-  bool _isPressed = false;
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+  bool _pressed = false;
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
+    _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 150),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.96).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
-    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.96,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  void _onTapDown(TapDownDetails details) {
-    if (!_isPressed) {
-      _isPressed = true;
-      _animationController.forward();
-    }
-  }
-
-  void _onTapUp(TapUpDetails details) {
-    if (_isPressed) {
-      _isPressed = false;
-      _animationController.reverse();
-    }
-  }
-
-  void _onTapCancel() {
-    if (_isPressed) {
-      _isPressed = false;
-      _animationController.reverse();
+  void _press(bool down) {
+    if (_pressed != down) {
+      setState(() => _pressed = down);
+      down ? _controller.forward() : _controller.reverse();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+
+    // Breakpoints
+    final width = MediaQuery.of(context).size.width;
+    final small = width < 380;
+    final large = width > 600;
+
+    // Quick responsive helpers
+    double r(double s, double m, double l) =>
+        small
+            ? s
+            : large
+            ? l
+            : m;
 
     return GestureDetector(
-      onTapDown: _onTapDown,
-      onTapUp: _onTapUp,
-      onTapCancel: _onTapCancel,
+      onTapDown: (_) => _press(true),
+      onTapUp: (_) => _press(false),
+      onTapCancel: () => _press(false),
       onTap: widget.onTap,
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: Container(
-              clipBehavior: Clip.antiAlias,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(TSizes.productImageRadius),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                    spreadRadius: 0,
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                    spreadRadius: 0,
-                  ),
-                ],
+      child: ScaleTransition(
+        scale: _scale,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(TSizes.productImageRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: r(15, 20, 25),
+                offset: Offset(0, r(6, 8, 10)),
               ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: dark ? TColors.darkerGrey : TColors.light,
-                  borderRadius: BorderRadius.circular(
-                    TSizes.productImageRadius,
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize:
-                      MainAxisSize
-                          .min, // Ensure the column doesn't try to expand
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Image section with overlay elements
-                    _buildProductImage(dark),
-
-                    // Details section
-                    _buildProductDetails(context, dark),
-                  ],
-                ),
-              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: dark ? TColors.darkerGrey : TColors.light,
+              borderRadius: BorderRadius.circular(TSizes.productImageRadius),
             ),
-          );
-        },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _ProductImage(
+                  image: widget.image,
+                  dark: dark,
+                  discountTag: widget.discountTag,
+                  isFavorite: widget.isFavorite,
+                  onFavoriteTap: widget.onFavoriteTap,
+                  height: r(140, 160, 180),
+                  iconSize: r(18, 20, 22),
+                ),
+                Padding(
+                  padding: EdgeInsets.all(r(8, 10, 14)),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.title,
+                        maxLines: large ? 2 : 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontSize: r(14, 15, 17), // increased
+                          fontWeight: FontWeight.w600,
+                          color: dark ? TColors.light : TColors.dark,
+                        ),
+                      ),
+                      SizedBox(height: r(4, 5, 6)),
+                      Row(
+                        children: [
+                          Text(
+                            '\$${widget.price.toStringAsFixed(2)}',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontSize: r(15, 17, 18), // increased
+                              color: TColors.textPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (widget.oldPrice != null) ...[
+                            SizedBox(width: r(4, 5, 6)),
+                            Text(
+                              '\$${widget.oldPrice!.toStringAsFixed(2)}',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                fontSize: r(12, 13, 14), // increased
+                                decoration: TextDecoration.lineThrough,
+                                color: TColors.grey,
+                              ),
+                            ),
+                          ],
+                          const Spacer(),
+                          Icon(
+                            Icons.star,
+                            size: r(12, 14, 16),
+                            color: Colors.amber,
+                          ),
+                          SizedBox(width: r(2, 3, 4)),
+                          Text(
+                            '4.0',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontSize: r(12, 13, 14), // increased
+                              color: TColors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: r(10, 12, 14)),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: _AddToCartButton(
+                          onTap: widget.onTap,
+                          dark: dark,
+                          width: r(55, 65, 75),
+                          height: r(33, 40, 44),
+                          iconSize: r(14, 16, 18),
+                          showText: large,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
+}
 
-  Widget _buildProductImage(bool dark) {
+class _ProductImage extends StatelessWidget {
+  final String image;
+  final bool dark;
+  final String? discountTag;
+  final bool isFavorite;
+  final VoidCallback? onFavoriteTap;
+  final double height;
+  final double iconSize;
+
+  const _ProductImage({
+    required this.image,
+    required this.dark,
+    required this.discountTag,
+    required this.isFavorite,
+    required this.onFavoriteTap,
+    required this.height,
+    required this.iconSize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Stack(
       children: [
-        // Product image with gradient overlay
         Container(
-          height: 150, // Reduced height from 170 to 150
+          height: height,
           width: double.infinity,
           decoration: BoxDecoration(
             color: dark ? TColors.dark : Colors.grey[100],
@@ -152,81 +228,49 @@ class _TProductCardVerticalState extends State<TProductCardVertical>
             borderRadius: const BorderRadius.vertical(
               top: Radius.circular(TSizes.productImageRadius),
             ),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Product image
-                Image.asset(widget.image, fit: BoxFit.contain),
-
-                // Subtle gradient overlay
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.05),
-                      ],
-                    ),
+            child: Image.asset(
+              image,
+              fit: BoxFit.contain,
+              errorBuilder:
+                  (_, __, ___) => Icon(
+                    Icons.image_not_supported_outlined,
+                    size: height * 0.3,
+                    color: TColors.grey,
                   ),
-                ),
-              ],
             ),
           ),
         ),
-
-        // Discount tag
-        if (widget.discountTag != null)
+        if (discountTag != null)
           Positioned(
-            top: 8, // Reduced from 12 to 8
-            left: 8, // Reduced from 12 to 8
+            top: 8,
+            left: 8,
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 4,
-              ), // Reduced padding
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: TColors.secondary,
                 borderRadius: BorderRadius.circular(TSizes.sm),
               ),
               child: Text(
-                widget.discountTag!,
+                discountTag!,
                 style: const TextStyle(
                   color: TColors.light,
                   fontWeight: FontWeight.bold,
-                  fontSize: 10, // Reduced from 12 to 10
+                  fontSize: 13, // increased
                 ),
               ),
             ),
           ),
-
-        // Favorite button
         Positioned(
-          top: 4, // Reduced from 8 to 4
-          right: 4, // Reduced from 8 to 4
-          child: Container(
-            height: 32, // Reduced from 36 to 32
-            width: 32, // Reduced from 36 to 32
-            decoration: BoxDecoration(
-              color: dark ? Colors.black38 : Colors.white.withOpacity(0.9),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4, // Reduced from 8 to 4
-                  spreadRadius: 0.5, // Reduced from 1 to 0.5
-                ),
-              ],
-            ),
+          top: 4,
+          right: 4,
+          child: CircleAvatar(
+            backgroundColor: dark ? Colors.black38 : Colors.white,
             child: IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              onPressed: widget.onFavoriteTap,
+              onPressed: onFavoriteTap,
               icon: Icon(
-                widget.isFavorite ? Icons.favorite : Icons.favorite_border,
-                color: widget.isFavorite ? Colors.red : TColors.grey,
-                size: 18, // Reduced from 20 to 18
+                isFavorite ? Icons.favorite : Icons.favorite_border,
+                size: iconSize,
+                color: isFavorite ? Colors.red : TColors.grey,
               ),
             ),
           ),
@@ -234,141 +278,23 @@ class _TProductCardVerticalState extends State<TProductCardVertical>
       ],
     );
   }
-
-  Widget _buildProductDetails(BuildContext context, bool dark) {
-    return Padding(
-      padding: const EdgeInsets.all(8), // Reduced from 12 to 8
-      child: Column(
-        mainAxisSize: MainAxisSize.min, // Ensure column only takes needed space
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Title with maximum 1 line to save space
-          Text(
-            widget.title,
-            style: TextStyle(
-              fontSize: 13, // Reduced from 14 to 13
-              fontWeight: FontWeight.w600,
-              color: dark ? TColors.light : TColors.dark,
-            ),
-            maxLines: 1, // Reduced from 2 to 1 line
-            overflow: TextOverflow.ellipsis,
-          ),
-
-          const SizedBox(height: 4), // Reduced from 6 to 4
-          // Price row with discount
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                '\$${widget.price.toStringAsFixed(2)}',
-                style: TextStyle(
-                  fontSize: 15, // Reduced from 16 to 15
-                  fontWeight: FontWeight.bold,
-                  color: TColors.primary,
-                ),
-              ),
-              if (widget.oldPrice != null) ...[
-                const SizedBox(width: 4), // Reduced from 6 to 4
-                Text(
-                  '\$${widget.oldPrice!.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 11, // Reduced from 12 to 11
-                    decoration: TextDecoration.lineThrough,
-                    color: TColors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-
-              const Spacer(),
-
-              // Combined rating with star icon to save space
-              Row(
-                children: [
-                  const Icon(
-                    Icons.star,
-                    color: Colors.amber,
-                    size: 12, // Reduced from 14 to 12
-                  ),
-                  const SizedBox(width: 2),
-                  Text(
-                    '4.0',
-                    style: TextStyle(
-                      fontSize: 11, // Reduced from 12 to 11
-                      color: TColors.grey,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 10), // Reduced from 10 to 6
-          // Add to cart button
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Container(
-                height: 28,
-                width: 60,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: TColors.primary, width: 1.0),
-                  color:
-                      dark
-                          ? Colors.transparent
-                          : TColors.light.withOpacity(0.7),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(4),
-                    onTap: widget.onTap,
-                    splashColor: TColors.primary.withOpacity(0.1),
-                    highlightColor: TColors.primary.withOpacity(0.05),
-                    child: Center(
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.shopping_cart_outlined,
-                            size: 14,
-                            color: dark ? TColors.light : TColors.primary,
-                          ),
-                          const SizedBox(width: 2),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }
 
-class TRoundedContainer extends StatelessWidget {
-  final double? width;
-  final double? height;
-  final double radius;
-  final Widget? child;
-  final EdgeInsetsGeometry? padding;
-  final EdgeInsetsGeometry? margin;
-  final Color backgroundColor;
+class _AddToCartButton extends StatelessWidget {
+  final VoidCallback? onTap;
+  final bool dark;
+  final double width;
+  final double height;
+  final double iconSize;
+  final bool showText;
 
-  const TRoundedContainer({
-    super.key,
-    this.width,
-    this.height,
-    this.radius = TSizes.cardRadiusLg,
-    this.child,
-    this.padding,
-    this.margin,
-    this.backgroundColor = TColors.light,
+  const _AddToCartButton({
+    required this.onTap,
+    required this.dark,
+    required this.width,
+    required this.height,
+    required this.iconSize,
+    required this.showText,
   });
 
   @override
@@ -376,13 +302,40 @@ class TRoundedContainer extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      padding: padding,
-      margin: margin,
       decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: TColors.primary),
+        borderRadius: BorderRadius.circular(4),
+        color: dark ? Colors.transparent : TColors.light.withOpacity(0.7),
       ),
-      child: child,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(4),
+          onTap: onTap,
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.shopping_cart_outlined,
+                  size: iconSize,
+                  color: dark ? TColors.light : TColors.primary,
+                ),
+                if (showText) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    'Add',
+                    style: TextStyle(
+                      fontSize: 14, // increased
+                      color: dark ? TColors.light : TColors.primary,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

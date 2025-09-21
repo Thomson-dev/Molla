@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
+import 'package:get_storage/get_storage.dart';
 
 class OnBoardingController extends GetxController {
   static OnBoardingController get instance => Get.find();
@@ -19,22 +20,29 @@ class OnBoardingController extends GetxController {
   /// Update Current Index & jump to next page
   void nextPage() {
     if (currentPageIndex.value < 2) {
-      // Change 2 to your last page index
+      // Assuming 3 onboarding pages (0, 1, 2)
       currentPageIndex.value++;
       pageController.nextPage(
         duration: const Duration(milliseconds: 300),
         curve: Curves.ease,
       );
     } else {
-      // Navigate to LoginPage when on the last page
-      Get.offAllNamed('/login'); // Use your route name here
-      // Or: Get.offAll(() => Login()); if you want to use the widget directly
+      // Mark onboarding as completed when reaching the end
+      final storage = GetStorage();
+      storage.write('isFirstTime', false);
+
+      // Navigate to LoginPage
+      Get.offAllNamed('/login');
     }
   }
 
   /// Update Current Index & jump to the last Page
   void skipPage() {
-    currentPageIndex.value = 2; // Change 2 to your last page index
+    currentPageIndex.value = 2; // Change to your last page index
     pageController.jumpToPage(2);
+
+    // Mark onboarding as completed when skipping
+    final storage = GetStorage();
+    storage.write('isFirstTime', false);
   }
 }

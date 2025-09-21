@@ -1,25 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:get/get.dart';
 
+import 'package:molla/features/authentication/controllers/login/login.controller.dart';
 import 'package:molla/features/authentication/screens/login/login.widget.dart';
 import 'package:molla/utils/constants/image_strings.dart';
 import 'package:molla/utils/constants/sizes.dart';
 import 'package:molla/utils/constants/text_strings.dart';
-
 import 'package:molla/utils/helpers/helper_functions.dart';
 
-class Login extends StatefulWidget {
+class Login extends StatelessWidget {
   const Login({super.key});
 
   @override
-  State<Login> createState() => _LoginState();
-}
-
-class _LoginState extends State<Login> {
-  bool rememberMe = false;
-
-  @override
   Widget build(BuildContext context) {
+    // ✅ Reuse existing controller or create a permanent one
+    final _ctrl = Get.put(LoginController(), permanent: true);
+
     final dark = THelperFunctions.isDarkMode(context);
 
     return Scaffold(
@@ -27,8 +24,8 @@ class _LoginState extends State<Login> {
         padding: EdgeInsets.only(
           top: TSizes.appBarHeight * 2,
           left: TSizes.defaultSpace,
-          bottom: TSizes.defaultSpace,
           right: TSizes.defaultSpace,
+          bottom: TSizes.defaultSpace,
         ),
         child: SingleChildScrollView(
           child: Column(
@@ -36,19 +33,31 @@ class _LoginState extends State<Login> {
             children: [
               LoginHeader(dark: dark),
               const SizedBox(height: TSizes.spaceBtwSections),
-              LoginForm(
-                rememberMe: rememberMe,
-                onRememberMeChanged: (value) {
-                  setState(() {
-                    rememberMe = value ?? false;
-                  });
-                },
+
+              // Reactive login form
+              Obx(
+                () => LoginForm(
+                  formKey: _ctrl.loginFormKey,
+                  emailController: _ctrl.emailController,
+                  passwordController: _ctrl.passwordController,
+                  rememberMe: _ctrl.rememberMe.value,
+                  obscureText: _ctrl.obscureText.value,
+                  togglePasswordVisibility: _ctrl.togglePasswordVisibility,
+                  onRememberMeChanged: (_) => _ctrl.toggleRememberMe(),
+                ),
               ),
-              const SizedBox(height: TSizes.spaceBtwSections),
-              LoginButtons(),
+
               const SizedBox(height: TSizes.spaceBtwSections),
 
-              /// Divider
+              // Buttons
+              LoginButtons(
+                onSignIn: () => _ctrl.emailAndPasswordSignIn(),
+                onCreateAccount: () => Get.toNamed('/signup'),
+              ),
+
+              const SizedBox(height: TSizes.spaceBtwSections),
+
+              // Divider
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -74,10 +83,9 @@ class _LoginState extends State<Login> {
                   ),
                 ],
               ),
-              // End Divider
               const SizedBox(height: TSizes.spaceBtwSections),
 
-              /// Footer
+              // Social login example
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -97,8 +105,6 @@ class _LoginState extends State<Login> {
                   ),
                 ],
               ),
-
-              // Add this inside your form or at the appropriate place in your widget tree
             ],
           ),
         ),
